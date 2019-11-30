@@ -1,41 +1,19 @@
 ﻿// --------------------------------------------------------------------------------------------------------------------
-// <copyright file="SimpleLogger.cs" company="Chromely">
-//   Copyright (c) 2017-2018 Kola Oyewumi
+// <copyright file="SimpleLogger.cs" company="Chromely Projects">
+//   Copyright (c) 2017-2019 Chromely Projects
 // </copyright>
 // <license>
-// MIT License
-// 
-// Permission is hereby granted, free of charge, to any person obtaining a copy
-// of this software and associated documentation files (the "Software"), to deal
-// in the Software without restriction, including without limitation the rights
-// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-// copies of the Software, and to permit persons to whom the Software is
-// furnished to do so, subject to the following conditions:
-// 
-// The above copyright notice and this permission notice shall be included in all
-// copies or substantial portions of the Software.
-// 
-// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-// SOFTWARE.
+//      See the LICENSE.md file in the project root for more information.
 // </license>
-// <note>
-// Chromely project is licensed under MIT License. CefGlue, CefSharp, Winapi may have additional licensing.
-// </note>
 // --------------------------------------------------------------------------------------------------------------------
+
+using System;
+using System.IO;
+using System.Text;
 
 // ReSharper disable InconsistentNaming
 namespace Chromely.Core.Infrastructure
 {
-    using System;
-    using System.IO;
-    using System.Reflection;
-    using System.Text;
-
     /// <summary>
     /// The simple logger.
     /// </summary>
@@ -44,22 +22,22 @@ namespace Chromely.Core.Infrastructure
         /// <summary>
         /// The filename.
         /// </summary>
-        private readonly string mFilename;
+        private readonly string _filename;
 
         /// <summary>
         /// The max size in kilo bytes.
         /// </summary>
-        private readonly int mMaxSizeInKiloBytes;
+        private readonly int _maxSizeInKiloBytes;
 
         /// <summary>
         /// The log to console flag.
         /// </summary>
-        private readonly bool mLogToConsole;
+        private readonly bool _logToConsole;
 
         /// <summary>
         /// The lock obj.
         /// </summary>
-        private readonly object mlockObj = new object();
+        private readonly object _lockObj = new object();
 
         /// <summary>
         /// Initializes a new instance of the <see cref="SimpleLogger"/> class.
@@ -77,18 +55,17 @@ namespace Chromely.Core.Infrastructure
         {
             if (string.IsNullOrEmpty(fullFilePath))
             {
-                string exeLocation = Path.GetDirectoryName(Assembly.GetEntryAssembly().Location);
-                string appendDay = DateTime.Now.ToString("yyyyMMdd");
-
-                fullFilePath = Path.Combine(exeLocation, "Logs", "chromely_" + appendDay + ".log");
+                var exeLocation = AppDomain.CurrentDomain.BaseDirectory;
+                var fileName = DateTime.Now.ToString("yyyyMMdd") + ".log";
+                fullFilePath = Path.Combine(exeLocation, "Logs", "chromely_" + fileName);
             }
 
-            this.mFilename = fullFilePath;
-            this.mLogToConsole = logToConsole;
+            _filename = fullFilePath;
+            _logToConsole = logToConsole;
 
             // 10 MB Max size before creating backup - not set
             rollingMaxMbFileSize = (rollingMaxMbFileSize < -0) ? 10 : rollingMaxMbFileSize;
-            this.mMaxSizeInKiloBytes = 1000 * rollingMaxMbFileSize; 
+            _maxSizeInKiloBytes = 1000 * rollingMaxMbFileSize; 
         }
 
         /// <summary>
@@ -99,7 +76,7 @@ namespace Chromely.Core.Infrastructure
         /// </param>
         public void Info(string message)
         {
-            this.Log(new LogEntry(LogLevel.INFO, message));
+            Log(new LogEntry(LogLevel.INFO, message));
         }
 
         /// <summary>
@@ -110,7 +87,7 @@ namespace Chromely.Core.Infrastructure
         /// </param>
         public void Debug(string message)
         {
-            this.Log(new LogEntry(LogLevel.DEBUG, message));
+            Log(new LogEntry(LogLevel.DEBUG, message));
         }
 
         /// <summary>
@@ -121,7 +98,7 @@ namespace Chromely.Core.Infrastructure
         /// </param>
         public void Verbose(string message)
         {
-            this.Log(new LogEntry(LogLevel.VERBOSE, message));
+            Log(new LogEntry(LogLevel.VERBOSE, message));
         }
 
         /// <summary>
@@ -132,7 +109,7 @@ namespace Chromely.Core.Infrastructure
         /// </param>
         public void Warn(string message)
         {
-            this.Log(new LogEntry(LogLevel.WARN, message));
+            Log(new LogEntry(LogLevel.WARN, message));
         }
 
         /// <summary>
@@ -143,7 +120,7 @@ namespace Chromely.Core.Infrastructure
         /// </param>
         public void Error(string message)
         {
-            this.Log(new LogEntry(LogLevel.ERROR, message));
+            Log(new LogEntry(LogLevel.ERROR, message));
         }
 
         /// <summary>
@@ -157,7 +134,7 @@ namespace Chromely.Core.Infrastructure
         /// </param>
         public void Error(Exception exception, string message = null)
         {
-            this.Log(new LogEntry(LogLevel.ERROR, message, exception));
+            Log(new LogEntry(LogLevel.ERROR, message, exception));
         }
 
         /// <summary>
@@ -168,7 +145,7 @@ namespace Chromely.Core.Infrastructure
         /// </param>
         public void Fatal(string message)
         {
-            this.Log(new LogEntry(LogLevel.FATAL, message));
+            Log(new LogEntry(LogLevel.FATAL, message));
         }
 
         /// <summary>
@@ -179,7 +156,7 @@ namespace Chromely.Core.Infrastructure
         /// </param>
         public void Critial(string message)
         {
-            this.Log(new LogEntry(LogLevel.CRITICAL, message));
+            Log(new LogEntry(LogLevel.CRITICAL, message));
         }
 
         /// <summary>
@@ -190,18 +167,18 @@ namespace Chromely.Core.Infrastructure
         /// </param>
         private void Log(LogEntry entry)
         {
-            lock (this.mlockObj)
+            lock (_lockObj)
             {
                 try
                 {
                     if (entry != null)
                     {
-                        if (this.mLogToConsole)
+                        if (_logToConsole)
                         {
-                            this.WriteToConsole(entry.ToString());
+                            WriteToConsole(entry.ToString());
                         }
 
-                        this.WriteToFile(entry.ToString());
+                        WriteToFile(entry.ToString());
                     }
                 }
                 catch (Exception)
@@ -224,19 +201,19 @@ namespace Chromely.Core.Infrastructure
                 return;
             }
 
-            var directoryName = Path.GetDirectoryName(this.mFilename);
+            var directoryName = Path.GetDirectoryName(_filename);
             if (!string.IsNullOrWhiteSpace(directoryName))
             {
                 Directory.CreateDirectory(directoryName);
             }
 
-            var fileInfo = new FileInfo(this.mFilename);
-            if (fileInfo.Exists && (fileInfo.Length / 1024 >= this.mMaxSizeInKiloBytes))
+            var fileInfo = new FileInfo(_filename);
+            if (fileInfo.Exists && (fileInfo.Length / 1024 >= _maxSizeInKiloBytes))
             {
-                this.CreateCopyOfCurrentLogFile(this.mFilename);
+                CreateCopyOfCurrentLogFile(_filename);
             }
 
-            var writer = new StreamWriter(this.mFilename, true, Encoding.UTF8) { AutoFlush = true };
+            var writer = new StreamWriter(_filename, true, Encoding.UTF8) { AutoFlush = true };
             writer.WriteLine(text);
             writer.Close();
             writer.Dispose();
@@ -263,7 +240,7 @@ namespace Chromely.Core.Infrastructure
         {
             for (var i = 1; i < 999; i++)
             {
-                var possibleFilePath = string.Format("{0}.{1:000}", filePath, i);
+                var possibleFilePath = $"{filePath}.{i:000}";
                 if (!File.Exists(possibleFilePath))
                 {
                     File.Move(filePath, possibleFilePath);
@@ -291,9 +268,9 @@ namespace Chromely.Core.Infrastructure
             /// </param>
             public LogEntry(LogLevel level, string entry, Exception error = null)
             {
-                this.LogLevel = level;
-                this.Entry = entry;
-                this.Error = error;
+                LogLevel = level;
+                Entry = entry;
+                Error = error;
             }
 
             /// <summary>
@@ -323,20 +300,20 @@ namespace Chromely.Core.Infrastructure
             public override string ToString()
             {
                 const string DefaultMessage = "Oops! Something went wrong.";
-                string formattedMessage = this.Entry;
+                string formattedMessage = Entry;
 
                 if (string.IsNullOrEmpty(formattedMessage))
                 {
                     formattedMessage = DefaultMessage;
                 }
 
-                if (this.Error != null)
+                if (Error != null)
                 {
-                    formattedMessage = $"{formattedMessage}\t{this.Error.Message}\t{this.Error.StackTrace}";
+                    formattedMessage = $"{formattedMessage}\t{Error.Message}\t{Error.StackTrace}";
                 }
 
                 string levelText;
-                switch (this.LogLevel)
+                switch (LogLevel)
                 {
                     case LogLevel.TRACE:
                         levelText = "[TRACE]";
@@ -368,7 +345,7 @@ namespace Chromely.Core.Infrastructure
                 }
 
                 string datetimeFormat = "yyyy-MM-dd HH:mm:ss.fff";
-                return string.Format("{0} {1} {2}", DateTime.Now.ToString(datetimeFormat), levelText, formattedMessage);
+                return $"{DateTime.Now.ToString(datetimeFormat)} {levelText} {formattedMessage}";
             }
         }
 
